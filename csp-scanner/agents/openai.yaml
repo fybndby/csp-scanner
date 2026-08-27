@@ -1,0 +1,4 @@
+interface:
+  display_name: "CSP Scanner"
+  short_description: "Scan and safely fix Content Security Policy issues"
+  default_prompt: "Use $csp-scanner to scan this project for CSP issues and preview safe fixes."

@@ -15,33 +15,6 @@
 - 应用模式只处理确定性修复，并在写入前创建备份。
 - 对需要业务判断的改动单独标记为“需人工确认”。
 
-## 项目结构
-
-```text
-.
-├── README.md
-└── csp-scanner/
-    ├── SKILL.md
-    ├── agents/
-    │   └── openai.yaml
-    ├── commands/
-    │   ├── csp-scan.md
-    │   └── csp-fix.md
-    ├── references/
-    │   ├── directives.md
-    │   ├── fix-patterns.md
-    │   ├── installation.md
-    │   ├── pitfalls.md
-    │   └── scan-targets.md
-    ├── scripts/
-    │   ├── scan_csp.py
-    │   └── fix_csp.py
-    └── tests/
-        └── test_cli.py
-```
-
-`csp-scanner/` 是完整的可分发 Skill 包。
-
 ## 安装
 
 建议将 `csp-scanner/` 复制到项目的供应商中立目录：

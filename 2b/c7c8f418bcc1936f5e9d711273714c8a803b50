@@ -1,0 +1,33 @@
+README.md
+  s_8416c8f87f3d4b::t_72546f00275b84 7,78-86,89,92-99,103-104
+csp-scanner/SKILL.md
+  s_8416c8f87f3d4b::t_a1f377ab1d9c69 13-15,35-39
+csp-scanner/references/fix-patterns.md
+  s_8416c8f87f3d4b::t_c8db3c9464f1da 5-49,71-72
+csp-scanner/references/pitfalls.md
+  s_8416c8f87f3d4b::t_ad54f2049da704 16,27
+csp-scanner/references/scan-targets.md
+  s_8416c8f87f3d4b::t_5a72e50f02c3fd 12-13,30-36
+csp-scanner/scripts/fix_csp.py
+  s_8416c8f87f3d4b::t_b43990bfb64b97 17,105-109
+csp-scanner/scripts/scan_csp.py
+  s_8416c8f87f3d4b::t_3a2bffcaf15479 22,159-163,249-285,295-296,303-304,338-339,366-367,380-382,387,392-393,415-416,463-474,528-532,621-628,633-639,676,683-687,711-716,727-731
+csp-scanner/tests/test_cli.py
+  s_8416c8f87f3d4b::t_781ad025312fbe 65-82,102-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2bc7c8f418bcc1936f5e9d711273714c8a803b50",
+  "prompts": {},
+  "sessions": {
+    "s_8416c8f87f3d4b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0429b-1be5-76b1-b895-2f0b077849f9",
+        "model": "unknown"
+      },
+      "human_author": "叶康杰 <yekj@tongbaninfo.com>"
+    }
+  }
+}

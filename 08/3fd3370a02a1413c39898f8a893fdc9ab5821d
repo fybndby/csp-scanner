@@ -1,0 +1,21 @@
+csp-scanner/agents/openai.yaml
+  s_8416c8f87f3d4b::t_a1b3a864b75340 1-4
+csp-scanner/scripts/scan_csp.py
+  s_8416c8f87f3d4b::t_6839422cbd96dd 1-665
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "083fd3370a02a1413c39898f8a893fdc9ab5821d",
+  "prompts": {},
+  "sessions": {
+    "s_8416c8f87f3d4b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0429b-1be5-76b1-b895-2f0b077849f9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "叶康杰 <yekj@tongbaninfo.com>"
+    }
+  }
+}

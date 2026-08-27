@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_FILE_BYTES = 2 * 1024 * 1024
 REPORT_NAME = ".csp-scan-report.json"
 
@@ -156,6 +156,11 @@ FRAMEWORK_MARKER = re.compile(
     re.IGNORECASE,
 )
 
+BUILD_CONFIG_TOOL = re.compile(
+    r"^(?P<tool>webpack|vite|rspack)(?:\.[^.]+)*\.config(?:\.[^.]+)*\.(?:c|m)?(?:j|t)s$",
+    re.IGNORECASE,
+)
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scan a project for CSP risks")
@@ -241,6 +246,43 @@ def looks_like_policy(policy: str) -> bool:
     return bool(POLICY_SHAPE.search(policy))
 
 
+def inside_named_object(text: str, offset: int, name: str) -> bool:
+    """Best-effort check that offset is inside a literal `name: { ... }` object."""
+    pattern = re.compile(rf"\b{re.escape(name)}\s*:\s*\{{")
+    for match in reversed(list(pattern.finditer(text, 0, offset))):
+        segment = text[match.end() : offset]
+        if segment.count("{") >= segment.count("}"):
+            return True
+    return False
+
+
+def classify_literal_delivery(
+    relative_path: str,
+    text: str,
+    offset: int,
+    default_source_kind: str,
+) -> tuple[str, str, bool]:
+    """Return source kind, delivery environment, and production candidacy."""
+    filename = Path(relative_path).name
+    match = BUILD_CONFIG_TOOL.match(filename)
+    if not match:
+        if default_source_kind in {"nginx", "apache"}:
+            return default_source_kind, "production", True
+        if filename in {"vercel.json", "netlify.toml", "_headers"}:
+            return "static-headers", "production", True
+        return default_source_kind, "runtime", True
+
+    tool = match.group("tool").lower()
+    if tool in {"webpack", "rspack"} and inside_named_object(text, offset, "devServer"):
+        return f"{tool}-dev-server", "development", False
+    if tool == "vite":
+        if inside_named_object(text, offset, "preview"):
+            return "vite-preview-server", "preview", False
+        if inside_named_object(text, offset, "server"):
+            return "vite-dev-server", "development", False
+    return f"{tool}-config", "unknown", False
+
+
 def make_configuration(
     *,
     relative_path: str,
@@ -250,12 +292,16 @@ def make_configuration(
     policy_start: int,
     policy_end: int,
     enforcing: bool,
+    delivery: str = "runtime",
+    production_candidate: bool = True,
 ) -> dict[str, Any]:
     return {
         "id": config_id(relative_path, policy_start, policy),
         "file": relative_path,
         "line": line_number(text, policy_start),
         "source_kind": source_kind,
+        "delivery": delivery,
+        "production_candidate": production_candidate,
         "enforcing": enforcing,
         "editable_literal": policy is not None,
         "snippet": line_snippet(text, policy_start),
@@ -289,6 +335,8 @@ def extract_configurations(relative_path: str, text: str) -> list[dict[str, Any]
                 policy_start=start,
                 policy_end=end,
                 enforcing=not report_only,
+                delivery="document",
+                production_candidate=False,
             )
         )
         occupied.add((start, end))
@@ -315,6 +363,8 @@ def extract_configurations(relative_path: str, text: str) -> list[dict[str, Any]
                     policy_start=start,
                     policy_end=end,
                     enforcing=match.group("report_only") is None,
+                    delivery="production",
+                    production_candidate=True,
                 )
             )
             occupied.add((start, end))
@@ -327,15 +377,20 @@ def extract_configurations(relative_path: str, text: str) -> list[dict[str, Any]
             start, end = match.span("policy")
             if any(start == known_start and end == known_end for known_start, known_end in occupied):
                 continue
+            classified_kind, delivery, production_candidate = classify_literal_delivery(
+                relative_path, text, start, source_kind
+            )
             configurations.append(
                 make_configuration(
                     relative_path=relative_path,
                     text=text,
-                    source_kind=source_kind,
+                    source_kind=classified_kind,
                     policy=policy,
                     policy_start=start,
                     policy_end=end,
                     enforcing=match.groupdict().get("report_only") is None,
+                    delivery=delivery,
+                    production_candidate=production_candidate,
                 )
             )
             occupied.add((start, end))
@@ -357,6 +412,8 @@ def extract_configurations(relative_path: str, text: str) -> list[dict[str, Any]
                 policy_start=start,
                 policy_end=end,
                 enforcing=False,
+                delivery="unknown",
+                production_candidate=False,
             )
         )
 
@@ -402,6 +459,18 @@ def evaluate_configuration(config: dict[str, Any]) -> list[dict[str, Any]]:
 
     findings: list[dict[str, Any]] = []
     directives: dict[str, list[str]] = config["directives"]
+
+    if config["delivery"] in {"development", "preview"}:
+        environment = "开发服务器" if config["delivery"] == "development" else "预览服务器"
+        findings.append(
+            finding(
+                config,
+                "development-only-csp",
+                "medium",
+                f"该 CSP 仅配置在{environment}中，不能证明生产部署已启用防护。",
+                "找到生产环境的服务器、反向代理、CDN 或托管平台，并以 HTTP 响应头发送经过验证的同等策略。",
+            )
+        )
 
     if not config["enforcing"]:
         findings.append(
@@ -456,7 +525,11 @@ def evaluate_configuration(config: dict[str, Any]) -> list[dict[str, Any]]:
                 "medium",
                 "缺少显式 object-src 'none'。",
                 "在当前策略末尾补充 object-src 'none'。",
-                auto_fix="add-object-src-none" if config["enforcing"] else None,
+                auto_fix=(
+                    "add-object-src-none"
+                    if config["enforcing"] and config["production_candidate"]
+                    else None
+                ),
             )
         )
     else:
@@ -545,10 +618,25 @@ def render_markdown(report: dict[str, Any]) -> str:
                 "这不是“零问题”：请在实际响应链路中确认是否由仓库外的 CDN 或网关注入 CSP。",
             ]
         )
+        if report["build_tools"]:
+            tools = "、".join(sorted({item["tool"] for item in report["build_tools"]}))
+            lines.extend(
+                [
+                    "",
+                    f"检测到构建工具：{tools}。其开发/预览服务器 headers 只能用于本地验证，生产 CSP 仍应配置在实际响应层。",
+                ]
+            )
         return "\n".join(lines)
 
     if not report["enforcing_detected"]:
         lines.extend(["**仅检测到非强制执行或无法确认的 CSP 配置。**", ""])
+    elif not report["production_enforcing_detected"]:
+        lines.extend(
+            [
+                "**仅检测到开发/预览、HTML Meta 或无法确认的 CSP；生产环境响应头未确认。**",
+                "",
+            ]
+        )
 
     lines.extend(
         [
@@ -585,12 +673,18 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 def scan(root: Path, max_file_bytes: int = MAX_FILE_BYTES) -> dict[str, Any]:
     configurations: list[dict[str, Any]] = []
+    build_tools: list[dict[str, str]] = []
     scanned_files = 0
     unreadable_files: list[str] = []
 
     for path in candidate_files(root, max_file_bytes):
         scanned_files += 1
         relative_path = path.relative_to(root).as_posix()
+        build_match = BUILD_CONFIG_TOOL.match(path.name)
+        if build_match:
+            build_tools.append(
+                {"tool": build_match.group("tool").lower(), "file": relative_path}
+            )
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -614,6 +708,12 @@ def scan(root: Path, max_file_bytes: int = MAX_FILE_BYTES) -> dict[str, Any]:
     summary = {
         "files_scanned": scanned_files,
         "configurations": len(configurations),
+        "production_configurations": sum(
+            config["production_candidate"] is True for config in configurations
+        ),
+        "development_configurations": sum(
+            config["delivery"] in {"development", "preview"} for config in configurations
+        ),
         "high": sum(item["severity"] == "high" for item in findings),
         "medium": sum(item["severity"] == "medium" for item in findings),
         "low": sum(item["severity"] == "low" for item in findings),
@@ -624,6 +724,11 @@ def scan(root: Path, max_file_bytes: int = MAX_FILE_BYTES) -> dict[str, Any]:
         "root": str(root),
         "detected": bool(configurations),
         "enforcing_detected": any(config["enforcing"] is True for config in configurations),
+        "production_enforcing_detected": any(
+            config["enforcing"] is True and config["production_candidate"] is True
+            for config in configurations
+        ),
+        "build_tools": build_tools,
         "configurations": configurations,
         "findings": findings,
         "summary": summary,

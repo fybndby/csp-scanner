@@ -62,6 +62,24 @@ class CspScannerCliTest(unittest.TestCase):
             self.assertIn("未检测到 CSP 配置", result.stdout)
             self.assertFalse((project / ".csp-scan-report.json").exists())
 
+    def test_scan_reports_build_tool_even_when_csp_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary)
+            (project / "vite.config.ts").write_text(
+                "export default { server: { port: 5173 } };\n", encoding="utf-8"
+            )
+
+            result = run_cli(SCAN, project, "--format", "both", "--no-write")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("未检测到 CSP 配置", result.stdout)
+            self.assertIn("检测到构建工具：vite", result.stdout)
+            report = json.loads(result.stdout.split("\n---\n", 1)[1])
+            self.assertEqual(
+                report["build_tools"],
+                [{"tool": "vite", "file": "vite.config.ts"}],
+            )
+
     def test_framework_marker_is_detected_but_not_claimed_as_enforcing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
@@ -80,6 +98,84 @@ class CspScannerCliTest(unittest.TestCase):
                 "unparsed-configuration",
                 {item["rule"] for item in report["findings"]},
             )
+
+    def test_build_tool_headers_are_classified_as_non_production(self) -> None:
+        cases = (
+            (
+                "webpack.config.js",
+                "module.exports = { devServer: { headers: { 'Content-Security-Policy': \"default-src 'self';\" } } };\n",
+                "webpack-dev-server",
+                "development",
+            ),
+            (
+                "vite.config.ts",
+                "export default { server: { headers: { 'Content-Security-Policy': \"default-src 'self';\" } } };\n",
+                "vite-dev-server",
+                "development",
+            ),
+            (
+                "rspack.config.mjs",
+                "export default { devServer: { headers: { 'Content-Security-Policy': \"default-src 'self';\" } } };\n",
+                "rspack-dev-server",
+                "development",
+            ),
+        )
+        for filename, source, expected_kind, expected_delivery in cases:
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as temporary:
+                project = Path(temporary)
+                (project / filename).write_text(source, encoding="utf-8")
+
+                result = run_cli(SCAN, project, "--format", "json", "--no-write")
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                report = json.loads(result.stdout)
+                self.assertTrue(report["enforcing_detected"])
+                self.assertFalse(report["production_enforcing_detected"])
+                config = report["configurations"][0]
+                self.assertEqual(config["source_kind"], expected_kind)
+                self.assertEqual(config["delivery"], expected_delivery)
+                self.assertFalse(config["production_candidate"])
+                self.assertIn(
+                    "development-only-csp",
+                    {item["rule"] for item in report["findings"]},
+                )
+
+    def test_vite_preview_headers_are_classified_as_preview_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary)
+            (project / "vite.config.js").write_text(
+                "export default { preview: { headers: { 'Content-Security-Policy': \"default-src 'self';\" } } };\n",
+                encoding="utf-8",
+            )
+
+            result = run_cli(SCAN, project, "--format", "json", "--no-write")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            config = report["configurations"][0]
+            self.assertEqual(config["source_kind"], "vite-preview-server")
+            self.assertEqual(config["delivery"], "preview")
+            self.assertFalse(report["production_enforcing_detected"])
+
+    def test_fixer_does_not_treat_dev_server_as_production_fix(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary)
+            source = project / "webpack.config.js"
+            original = (
+                "module.exports = { devServer: { headers: { "
+                "'Content-Security-Policy': \"default-src 'self';\" } } };\n"
+            )
+            source.write_text(original, encoding="utf-8")
+            scan = run_cli(SCAN, project)
+            self.assertEqual(scan.returncode, 0, scan.stderr)
+
+            result = run_cli(FIX, "--report", project / ".csp-scan-report.json", "--apply")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("没有可确定性自动修改的项目", result.stdout)
+            self.assertIn("需人工确认", result.stdout)
+            self.assertEqual(source.read_text(encoding="utf-8"), original)
+            self.assertFalse((project / "webpack.config.js.bak").exists())
 
     def test_fix_preview_does_not_modify_source(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

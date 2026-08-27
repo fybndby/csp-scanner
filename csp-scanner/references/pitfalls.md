@@ -13,6 +13,7 @@ The scanner emits stable rule identifiers so a report can be consumed by the fix
 | `missing-base-uri` | Medium | Injected `<base>` elements are not explicitly constrained | Requires checking legitimate base URL behavior |
 | `weak-base-uri` | High | `base-uri` contains broad or active sources | Requires checking legitimate base URL behavior |
 | `meta-frame-ancestors` | High | A meta-delivered policy cannot enforce `frame-ancestors` | Move or supplement the policy with a response header |
+| `development-only-csp` | Medium | A policy is configured only in a Webpack/Vite/Rspack development or preview server | Configure and verify the production response layer; keep the build-tool setting only for local parity |
 | `report-only` | Low | A report-only policy was found without proof of enforcement | Verify an enforcing policy is also delivered |
 | `unparsed-configuration` | Low | A CSP-related configuration marker was found but no complete literal was parsed | Inspect the local framework/configuration context |
 
@@ -23,6 +24,7 @@ The scanner emits stable rule identifiers so a report can be consumed by the fix
 - `default-src` is a fallback for several fetch directives, but `frame-ancestors` and `base-uri` do not fall back to it. This skill still requires an explicit `object-src 'none'` for auditable hardening.
 - `frame-src` controls framed content loaded by the page. `frame-ancestors` controls who may embed the page. They are not interchangeable.
 - A CSP in HTML is not equivalent to an HTTP response header. In particular, `frame-ancestors`, sandbox, and reporting behavior have delivery constraints.
+- Webpack/Rspack `devServer.headers` and Vite `server.headers` or `preview.headers` do not configure production hosting. Never close a production finding solely because one of these settings exists.
 
 ## Severity overrides
 

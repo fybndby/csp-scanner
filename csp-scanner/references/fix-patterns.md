@@ -2,6 +2,51 @@
 
 Read this reference before generating or applying fixes.
 
+## Choose the delivery layer first
+
+Use this priority order before changing directives:
+
+1. Update the component that actually returns production responses: application server, reverse proxy, CDN, or hosting platform.
+2. For a statically deployed site, use the hosting provider's response-header configuration, such as `_headers`, `vercel.json`, Nginx, Apache, or the equivalent platform setting.
+3. Mirror the tested policy in Webpack/Rspack `devServer.headers`, Vite `server.headers`, or Vite `preview.headers` only when local development needs CSP parity. Label this as development/preview configuration.
+4. Use `<meta http-equiv="Content-Security-Policy">` only when HTTP response headers truly cannot be configured. Document that it cannot enforce `frame-ancestors` and does not provide equivalent reporting or framing coverage.
+
+`X-Frame-Options` is also an HTTP response header. Putting it in HTML has no effect. Prefer CSP `frame-ancestors` as the primary framing policy; optionally retain a compatible `X-Frame-Options: DENY` or `SAMEORIGIN` response header for legacy defense.
+
+Development-only examples:
+
+```js
+// webpack.config.js or rspack.config.js — local development only
+export default {
+  devServer: {
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self';",
+      'X-Frame-Options': 'SAMEORIGIN',
+    },
+  },
+};
+```
+
+```js
+// vite.config.js — server is dev; preview is local production-build preview
+export default {
+  server: {
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self';",
+      'X-Frame-Options': 'SAMEORIGIN',
+    },
+  },
+  preview: {
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self';",
+      'X-Frame-Options': 'SAMEORIGIN',
+    },
+  },
+};
+```
+
+Do not insert either example blindly. First derive the policy from the application's actual script, style, image, font, connection, worker, and framing requirements. Production must receive the final policy as an HTTP response header from its real delivery layer.
+
 ## Decision classes
 
 ### Deterministic
@@ -23,6 +68,8 @@ Do not automatically apply these changes:
 - choosing a `frame-ancestors` value;
 - changing an existing `object-src` or `base-uri`;
 - converting a meta policy to a response header;
+- treating a development or preview server header as the production fix;
+- choosing the application's production response layer when deployment ownership is unclear;
 - rewriting computed strings, framework objects, generated config, or environment-dependent policies.
 
 ## Inline code removal

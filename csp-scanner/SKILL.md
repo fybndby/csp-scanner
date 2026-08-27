@@ -10,6 +10,9 @@ Audit CSP statically and make the smallest safe change in the configuration alre
 ## Safety boundaries
 
 - Prefer a response header over an HTML `meta` policy. A meta policy cannot enforce every directive, including `frame-ancestors`.
+- Before proposing a fix, identify which component serves the production response: application server, reverse proxy, CDN, or hosting platform. Put the authoritative CSP there.
+- Treat Webpack/Rspack `devServer.headers`, Vite `server.headers`, and Vite `preview.headers` as development or preview coverage only. They are useful for local compatibility testing but never prove production protection.
+- Use an HTML meta policy only as a documented last resort when response headers cannot be controlled. Never put `frame-ancestors` or `X-Frame-Options` in a meta tag and claim clickjacking protection.
 - Reject bare `*`, `'unsafe-inline'`, and `'unsafe-eval'` as hardened-policy endpoints. Do not remove them automatically when doing so may break scripts or styles.
 - Prefer external files first, then per-response nonces for dynamic content, then hashes for stable inline content. Do not add a static nonce.
 - Require an explicit `object-src 'none'`, an explicit `frame-ancestors` policy, and a restrictive `base-uri` such as `'self'` or `'none'`.
@@ -29,10 +32,11 @@ Natural-language requests map to the same workflows. “Scan/check/audit CSP” 
 ## Scan workflow
 
 1. Read [references/scan-targets.md](references/scan-targets.md) to choose relevant files and understand static-analysis limits.
-2. Run `python3 <skill-root>/scripts/scan_csp.py <project-path>`. It writes `.csp-scan-report.json` in the scanned root and prints a Markdown summary. Pass `--no-write` if the user forbids even a report artifact.
-3. Use [references/pitfalls.md](references/pitfalls.md) to interpret findings. Inspect any `unparsed-configuration` context manually rather than assuming it is safe.
-4. Report each issue in a Markdown table with file, line, severity, problem, and suggested fix. If `detected` is false, state exactly: `未检测到 CSP 配置`.
-5. Mention static-analysis blind spots that are relevant to the project. Do not claim runtime enforcement was verified.
+2. Identify the build tool and the actual production delivery layer. Do not assume a build-tool development server is the deployment server.
+3. Run `python3 <skill-root>/scripts/scan_csp.py <project-path>`. It writes `.csp-scan-report.json` in the scanned root and prints a Markdown summary. Pass `--no-write` if the user forbids even a report artifact.
+4. Use [references/pitfalls.md](references/pitfalls.md) to interpret findings. Inspect any `unparsed-configuration` context manually rather than assuming it is safe.
+5. Report each issue in a Markdown table with file, line, severity, problem, and suggested fix. If `detected` is false, state exactly: `未检测到 CSP 配置`.
+6. Mention static-analysis blind spots that are relevant to the project. Do not claim runtime enforcement was verified.
 
 ## Fix workflow
 

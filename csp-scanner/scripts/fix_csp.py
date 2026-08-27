@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 
-SUPPORTED_SCHEMA_VERSION = 1
+SUPPORTED_SCHEMA_VERSION = 2
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -102,7 +102,11 @@ def build_plan(
         if auto_fix != "add-object-src-none" or config is None:
             manual.append(item)
             continue
-        if not config.get("enforcing") or not config.get("editable_literal"):
+        if (
+            not config.get("enforcing")
+            or not config.get("editable_literal")
+            or not config.get("production_candidate")
+        ):
             manual.append(item)
             continue
         if not isinstance(config.get("policy"), str):

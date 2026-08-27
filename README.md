@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 扫描项目中的 CSP 响应头、HTML Meta 标签和部署配置。
+- 扫描 CSP 响应头、HTML Meta、部署配置及 Webpack、Vite、Rspack 配置，并区分开发/预览与生产环境。
 - 检测 `unsafe-inline`、`unsafe-eval`、裸 `*` 等危险配置。
 - 检测缺失的 `object-src`、`frame-ancestors` 和 `base-uri`。
 - 输出包含文件、行号、风险等级和修复建议的扫描报告。
@@ -75,14 +75,32 @@ npx skills@latest add fybndby/csp-scanner \
 扫描完成后预览修复：
 
 ```text
-使用 $csp-scanner，根据扫描结果预览 CSP 修复
+/csp-fix
 ```
 
-明确应用确定性修复：
+`/csp-fix` 默认只输出修复 diff，不会修改文件。
+
+确认后应用确定性修复：
 
 ```text
+/csp-fix --apply
+```
+
+只处理指定风险等级：
+
+```text
+/csp-fix --only high
+/csp-fix --apply --only medium
+```
+
+如果 Agent 不支持自定义斜杠命令，可以使用自然语言：
+
+```text
+使用 $csp-scanner，根据扫描结果预览 CSP 修复
 使用 $csp-scanner，应用扫描结果中的确定性 CSP 修复
 ```
+
+涉及 `unsafe-inline`、通配符、nonce 和 `frame-ancestors` 等需要业务判断的问题，即使使用 `--apply` 也不会强制修改。
 
 扫描报告默认保存在项目根目录：
 

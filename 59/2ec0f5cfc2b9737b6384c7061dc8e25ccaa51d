@@ -1,0 +1,19 @@
+README.md
+  s_8416c8f87f3d4b::t_1edb09210cfd51 3,7-12,16,19,22,25,28,30,33-37,40,43,46,48,50-56,59,61,63,66,69,72,75,78,81,84,87,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "592ec0f5cfc2b9737b6384c7061dc8e25ccaa51d",
+  "prompts": {},
+  "sessions": {
+    "s_8416c8f87f3d4b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0429b-1be5-76b1-b895-2f0b077849f9",
+        "model": "unknown"
+      },
+      "human_author": "叶康杰 <yekj@tongbaninfo.com>"
+    }
+  }
+}

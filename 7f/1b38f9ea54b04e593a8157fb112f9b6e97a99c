@@ -1,0 +1,19 @@
+README.md
+  s_8416c8f87f3d4b::t_ce7c8559b0865b 14-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7f1b38f9ea54b04e593a8157fb112f9b6e97a99c",
+  "prompts": {},
+  "sessions": {
+    "s_8416c8f87f3d4b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0429b-1be5-76b1-b895-2f0b077849f9",
+        "model": "unknown"
+      },
+      "human_author": "叶康杰 <yekj@tongbaninfo.com>"
+    }
+  }
+}

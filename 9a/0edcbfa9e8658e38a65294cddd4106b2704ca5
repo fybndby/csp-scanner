@@ -1,0 +1,29 @@
+README.md
+  s_fb9fb8fe987b75::t_a0ec26b6f7d401 11-12,175,177,180-186,189,192-198,201
+csp-scanner/SKILL.md
+  s_fb9fb8fe987b75::t_58e8a40bfdceb4 20,28,30,45-47
+csp-scanner/commands/csp-fix.md
+  s_fb9fb8fe987b75::t_80dc4f8c9b7c2d 1,7-9,15,19-20,25,28
+csp-scanner/references/fix-patterns.md
+  s_fb9fb8fe987b75::t_a29c6004ba56b7 60
+csp-scanner/scripts/fix_csp.py
+  s_fb9fb8fe987b75::t_505911fe9445c4 28,229,238,241,243,254-255
+csp-scanner/tests/test_cli.py
+  s_fb9fb8fe987b75::t_9c09ef0002be0a 211,232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9a0edcbfa9e8658e38a65294cddd4106b2704ca5",
+  "prompts": {},
+  "sessions": {
+    "s_fb9fb8fe987b75": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04833-c329-7f93-a06c-e7fcc84b0330",
+        "model": "unknown"
+      },
+      "human_author": "叶康杰 <yekj@tongbaninfo.com>"
+    }
+  }
+}

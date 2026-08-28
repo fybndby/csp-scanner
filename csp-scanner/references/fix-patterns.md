@@ -57,7 +57,7 @@ The bundled fixer automatically handles only this current case:
 - `object-src` is absent; and
 - adding `object-src 'none'` does not require rewriting a framework directive object.
 
-The fixer validates the report's source span before editing, creates a sibling backup, and refuses stale or ambiguous input. Adding more automatic rules requires tests proving both safe selection and safe refusal.
+The fixer validates the report's source span before editing, does not create backup files, and refuses stale or ambiguous input. Adding more automatic rules requires tests proving both safe selection and safe refusal.
 
 ### Requires review
 

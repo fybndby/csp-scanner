@@ -17,7 +17,7 @@ Audit CSP statically and make the smallest safe change in the configuration alre
 - Prefer external files first, then per-response nonces for dynamic content, then hashes for stable inline content. Do not add a static nonce.
 - Require an explicit `object-src 'none'`, an explicit `frame-ancestors` policy, and a restrictive `base-uri` such as `'self'` or `'none'`.
 - Never broaden a source list to make a page work. Record the required origin precisely and ask for evidence when it is unclear.
-- Treat preview as the default. Apply source changes only when the user invokes `/csp-fix --apply` or otherwise explicitly authorizes applying them.
+- When the user explicitly asks to fix CSP issues, apply deterministic source changes directly and then present the diff for human review. Use preview-only mode only when the user asks to preview or uses `--preview`.
 - Even in apply mode, skip findings marked `requires_review`. List them separately with the decision the user must make.
 
 ## Commands
@@ -25,9 +25,9 @@ Audit CSP statically and make the smallest safe change in the configuration alre
 Interpret the following user input as commands even when the host does not provide native slash-command registration:
 
 - `/csp-scan [path]`: follow [commands/csp-scan.md](commands/csp-scan.md). Scan only; source and configuration files must remain unchanged.
-- `/csp-fix [--apply] [--only high|medium|low]`: follow [commands/csp-fix.md](commands/csp-fix.md). Preview by default; apply only deterministic changes when explicitly requested.
+- `/csp-fix [--preview] [--apply] [--only high|medium|low]`: follow [commands/csp-fix.md](commands/csp-fix.md). Apply deterministic changes by default; `--preview` keeps source files unchanged. `--apply` remains accepted for clarity and compatibility.
 
-Natural-language requests map to the same workflows. “Scan/check/audit CSP” means scan. “Fix/harden the CSP” means fix, still in preview mode unless application was explicitly requested.
+Natural-language requests map to the same workflows. “Scan/check/audit CSP” means scan. “Fix/harden the CSP” means apply deterministic fixes directly, then show the diff and manual follow-ups. If the user asks to preview, do not modify files.
 
 ## Scan workflow
 
@@ -42,9 +42,9 @@ Natural-language requests map to the same workflows. “Scan/check/audit CSP” 
 
 1. Run the scan and, only when machine-readable findings are needed, write its JSON output to a temporary directory outside the project. Never create `.csp-scan-report.json` in the project root.
 2. Read [references/fix-patterns.md](references/fix-patterns.md) and classify each finding as deterministic or `requires_review`.
-3. Run `python3 <skill-root>/scripts/fix_csp.py --report <temporary-report-path>`, adding `--only <severity>` when requested. Remove the temporary report after the workflow completes.
-4. Present the unified diff and one short reason per changed policy. Do not edit files in preview mode.
-5. With explicit apply authorization, rerun with `--apply`. The script validates source spans, creates a sibling backup, and applies only deterministic changes.
+3. Run `python3 <skill-root>/scripts/fix_csp.py --report <temporary-report-path> --apply`, adding `--only <severity>` when requested. Remove the temporary report after the workflow completes.
+4. Present the unified diff and one short reason per changed policy. In preview mode, do not edit files.
+5. The script validates source spans and applies only deterministic changes without creating backup files. Keep `requires_review` findings unchanged and list them for manual review; the user reviews the resulting diff or uses Git to revert if needed.
 6. Re-scan, then show a before/after checklist and a separate manual follow-up list.
 
 When a framework-specific nonce or hash implementation is required, inspect how responses, templates, static generation, and caching work before proposing code. A nonce must be unpredictable, unique per response, present in both the CSP header and matching elements, and handled safely by caches.

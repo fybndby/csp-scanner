@@ -6,10 +6,8 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
-import shutil
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +25,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="write deterministic changes after creating backups",
+        help="write deterministic changes without creating backup files",
     )
     parser.add_argument(
         "--only",
@@ -65,19 +63,6 @@ def append_object_src_none(policy: str) -> str:
         raise ValueError("cannot edit an empty policy")
     separator = " " if core.endswith(";") else "; "
     return f"{leading}{core}{separator}object-src 'none';{trailing}"
-
-
-def backup_path(path: Path) -> Path:
-    simple = path.with_name(path.name + ".bak")
-    if not simple.exists():
-        return simple
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    candidate = path.with_name(path.name + f".bak.{stamp}")
-    suffix = 1
-    while candidate.exists():
-        candidate = path.with_name(path.name + f".bak.{stamp}.{suffix}")
-        suffix += 1
-    return candidate
 
 
 def selected_findings(report: dict[str, Any], severity: str | None) -> list[dict[str, Any]]:
@@ -241,28 +226,21 @@ def main(argv: list[str] | None = None) -> int:
         diff_path.write_text(combined_diff, encoding="utf-8")
 
     if args.apply and changes:
-        backups: list[tuple[Path, Path]] = []
-        attempted: list[tuple[Path, Path]] = []
+        applied: list[Path] = []
         try:
             # Validate every target before the first source write so a stale
             # later file cannot cause a predictable partial application.
             for path, (original, _updated) in changes.items():
                 if path.read_text(encoding="utf-8") != original:
                     raise ValueError(f"source changed during apply: {path}; no files written")
-            for path, (original, updated) in changes.items():
-                backup = backup_path(path)
-                shutil.copy2(path, backup)
-                backups.append((path, backup))
-
             for path, (_original, updated) in changes.items():
-                backup = next(saved for target, saved in backups if target == path)
-                attempted.append((path, backup))
                 path.write_text(updated, encoding="utf-8")
+                applied.append(path)
         except (OSError, ValueError) as exc:
             rollback_errors: list[str] = []
-            for path, backup in reversed(attempted):
+            for path in reversed(applied):
                 try:
-                    shutil.copy2(backup, path)
+                    path.write_text(changes[path][0], encoding="utf-8")
                 except OSError as rollback_exc:
                     rollback_errors.append(f"{path}: {rollback_exc}")
             print(f"error: apply failed: {exc}", file=sys.stderr)
@@ -273,8 +251,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
             return 2
         print("\n已应用：")
-        for path, backup in backups:
-            print(f"- {path.relative_to(root)}（备份：{backup.name}）")
+        for path in changes:
+            print(f"- {path.relative_to(root)}")
         print("请重新运行 /csp-scan 验证结果。")
     elif not args.apply:
         print("\n预览模式：未修改任何源文件。使用 --apply 需明确授权。")

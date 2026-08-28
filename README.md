@@ -8,8 +8,8 @@
 - 检测 `unsafe-inline`、`unsafe-eval`、裸 `*` 等危险配置。
 - 检测缺失的 `object-src`、`frame-ancestors` 和 `base-uri`。
 - 输出包含文件、行号、风险等级和修复建议的扫描报告。
-- 默认预览修复 diff，不直接修改源码。
-- 应用确定性修复前自动创建备份；不确定的改动会保留给人工确认。
+- 修复请求默认直接应用确定性改动，并输出 diff 供人工审核；也支持预览模式。
+- 应用确定性修复后输出 diff 供人工审核；不确定的改动会保留给人工确认，不创建额外备份文件。
 
 ## 可检测的问题
 
@@ -172,34 +172,32 @@ npx skills@latest add fybndby/csp-scanner \
 扫描一下这个项目的 CSP 问题
 ```
 
-扫描完成后预览修复：
+### 修复方式
+
+`/csp-fix` 是 Skill 内定义的工作流名，不一定会被 Agent 注册成可直接输入的斜杠命令。默认会直接应用确定性的 CSP 修复，并输出 diff 供你人工审核。只有宿主支持自定义斜杠命令时，才可以直接使用：
 
 ```text
-/csp-fix
+/csp-fix                         # 直接应用确定性修复，不创建备份
+/csp-fix --preview               # 只预览修复 diff，不修改文件
+/csp-fix --apply                 # 明确应用确定性修复，不创建备份
+/csp-fix --only high             # 只应用 high 中的确定性修复
+/csp-fix --only medium           # 只应用 medium 中的确定性修复
+/csp-fix --only low              # 只应用 low 中的确定性修复
+/csp-fix --apply --only medium   # 只应用中风险中的确定性修复
 ```
 
-`/csp-fix` 默认只输出修复 diff，不会修改文件。
-
-确认后应用确定性修复：
+如果当前 Agent 只有 `$csp-scanner` 入口，请使用自然语言传达同样的参数：
 
 ```text
-/csp-fix --apply
+使用 $csp-scanner，直接修复 CSP 漏洞，然后输出 diff 供我人工审核
+使用 $csp-scanner，只预览 CSP 修复，不要修改文件
+使用 $csp-scanner，应用确定性的 CSP 修复，不要创建备份
+使用 $csp-scanner，只修复 high 风险中的确定性 CSP 问题
+使用 $csp-scanner，只修复 medium 风险中的确定性 CSP 问题
+使用 $csp-scanner，只修复 low 风险中的确定性 CSP 问题
+使用 $csp-scanner，只应用 medium 风险中的确定性 CSP 修复
 ```
 
-只处理指定风险等级：
-
-```text
-/csp-fix --only high
-/csp-fix --apply --only medium
-```
-
-如果 Agent 不支持自定义斜杠命令，可以使用自然语言：
-
-```text
-使用 $csp-scanner，根据扫描结果预览 CSP 修复
-使用 $csp-scanner，应用扫描结果中的确定性 CSP 修复
-```
-
-涉及 `unsafe-inline`、通配符、nonce 和 `frame-ancestors` 等需要业务判断的问题，即使使用 `--apply` 也不会强制修改。
+涉及 `unsafe-inline`、通配符、nonce 和 `frame-ancestors` 等需要业务判断的问题，即使执行默认修复也不会强制修改，会保留给你人工审核。
 
 扫描默认不在项目中生成报告文件。修复流程需要机器可读结果时，会使用项目目录之外的临时文件，并在流程结束后删除。

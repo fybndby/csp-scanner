@@ -208,7 +208,7 @@ class CspScannerCliTest(unittest.TestCase):
             self.assertEqual(source.read_text(encoding="utf-8"), original)
             self.assertFalse((project / "nginx.conf.bak").exists())
 
-    def test_fix_apply_changes_only_deterministic_finding_and_backs_up(self) -> None:
+    def test_fix_apply_changes_only_deterministic_finding_without_backup(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
             source = project / "_headers"
@@ -229,10 +229,7 @@ class CspScannerCliTest(unittest.TestCase):
             self.assertIn("object-src 'none'", updated)
             self.assertIn("default-src *", updated)
             self.assertIn("'unsafe-inline'", updated)
-            self.assertEqual(
-                (project / "_headers.bak").read_text(encoding="utf-8"),
-                original,
-            )
+            self.assertFalse((project / "_headers.bak").exists())
             self.assertIn("需人工确认", result.stdout)
 
     def test_fix_refuses_a_stale_report(self) -> None:

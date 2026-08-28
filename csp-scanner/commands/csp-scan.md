@@ -6,7 +6,7 @@ Scan a path for CSP configuration and risks without changing application or infr
 
 - `path` is optional and defaults to the current project root.
 - Reject a path that does not exist or is not a directory.
-- Use `--no-write` when the user forbids creation of the `.csp-scan-report.json` report artifact.
+- Scanning must not create `.csp-scan-report.json` or any other artifact in the project.
 
 ## Procedure
 
@@ -14,10 +14,10 @@ Scan a path for CSP configuration and risks without changing application or infr
 2. Run:
 
    ```bash
-   python3 <skill-root>/scripts/scan_csp.py <path>
+   python3 <skill-root>/scripts/scan_csp.py <path> --no-write
    ```
 
-3. Parse the JSON report at `<path>/.csp-scan-report.json`. The source tree is not modified; this report is the only default artifact.
+3. Use the terminal Markdown output. Do not expect or create a report file in `<path>`.
 4. Inspect every `unparsed-configuration` finding in local context.
 5. Present the Markdown table required by `SKILL.md`, preserving relative paths and line numbers.
 

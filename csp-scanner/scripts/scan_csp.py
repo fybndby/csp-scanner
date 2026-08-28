@@ -168,18 +168,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--output",
         default=REPORT_NAME,
-        help=f"JSON report path (default: <root>/{REPORT_NAME})",
+        help=f"JSON report path when writing is enabled (default: <root>/{REPORT_NAME})",
     )
     parser.add_argument(
         "--format",
         choices=("markdown", "json", "both"),
         default="markdown",
-        help="terminal output format; JSON is still written unless --no-write is used",
+        help="terminal output format",
     )
     parser.add_argument(
         "--no-write",
         action="store_true",
-        help="do not create the JSON report artifact",
+        help="do not create a JSON report artifact (default)",
+    )
+    parser.set_defaults(no_write=True)
+    parser.add_argument(
+        "--write",
+        dest="no_write",
+        action="store_false",
+        help="write the JSON report to --output; intended for temporary fixer input",
     )
     parser.add_argument(
         "--max-file-bytes",

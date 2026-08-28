@@ -33,16 +33,16 @@ Natural-language requests map to the same workflows. “Scan/check/audit CSP” 
 
 1. Read [references/scan-targets.md](references/scan-targets.md) to choose relevant files and understand static-analysis limits.
 2. Identify the build tool and the actual production delivery layer. Do not assume a build-tool development server is the deployment server.
-3. Run `python3 <skill-root>/scripts/scan_csp.py <project-path>`. It writes `.csp-scan-report.json` in the scanned root and prints a Markdown summary. Pass `--no-write` if the user forbids even a report artifact.
+3. Run `python3 <skill-root>/scripts/scan_csp.py <project-path>`. It prints a Markdown summary and does not write any report file. If the fix workflow needs machine-readable intermediate data, write it to a temporary directory outside the project and remove it after use.
 4. Use [references/pitfalls.md](references/pitfalls.md) to interpret findings. Inspect any `unparsed-configuration` context manually rather than assuming it is safe.
 5. Report each issue in a Markdown table with file, line, severity, problem, and suggested fix. If `detected` is false, state exactly: `未检测到 CSP 配置`.
 6. Mention static-analysis blind spots that are relevant to the project. Do not claim runtime enforcement was verified.
 
 ## Fix workflow
 
-1. Read `.csp-scan-report.json`; if it does not exist or is stale, run the scan first.
+1. Run the scan and, only when machine-readable findings are needed, write its JSON output to a temporary directory outside the project. Never create `.csp-scan-report.json` in the project root.
 2. Read [references/fix-patterns.md](references/fix-patterns.md) and classify each finding as deterministic or `requires_review`.
-3. Run `python3 <skill-root>/scripts/fix_csp.py --report <project-root>/.csp-scan-report.json`, adding `--only <severity>` when requested.
+3. Run `python3 <skill-root>/scripts/fix_csp.py --report <temporary-report-path>`, adding `--only <severity>` when requested. Remove the temporary report after the workflow completes.
 4. Present the unified diff and one short reason per changed policy. Do not edit files in preview mode.
 5. With explicit apply authorization, rerun with `--apply`. The script validates source spans, creates a sibling backup, and applies only deterministic changes.
 6. Re-scan, then show a before/after checklist and a separate manual follow-up list.

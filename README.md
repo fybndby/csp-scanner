@@ -202,8 +202,4 @@ npx skills@latest add fybndby/csp-scanner \
 
 涉及 `unsafe-inline`、通配符、nonce 和 `frame-ancestors` 等需要业务判断的问题，即使使用 `--apply` 也不会强制修改。
 
-扫描报告默认保存在项目根目录：
-
-```text
-.csp-scan-report.json
-```
+扫描默认不在项目中生成报告文件。修复流程需要机器可读结果时，会使用项目目录之外的临时文件，并在流程结束后删除。

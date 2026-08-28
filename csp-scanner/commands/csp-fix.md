@@ -10,17 +10,17 @@ Turn the latest CSP scan into conservative changes and a manual follow-up list.
 
 ## Procedure
 
-1. Locate `<project-root>/.csp-scan-report.json`. If missing, run `/csp-scan` first. If files changed after the report, re-scan instead of trusting stale offsets.
+1. Re-scan the project and write the JSON result to a temporary path outside `<project-root>` (for example, `python3 <skill-root>/scripts/scan_csp.py <project-root> --format json --write --output /tmp/csp-scan-report.json`). If files change, re-scan instead of trusting stale offsets. Do not create `.csp-scan-report.json` in the project.
 2. Run preview:
 
    ```bash
    python3 <skill-root>/scripts/fix_csp.py \
-     --report <project-root>/.csp-scan-report.json
+     --report <temporary-report-path>
    ```
 
 3. Add `--only <severity>` if requested.
 4. Show the unified diff, one-line reasons, and the `requires_review` list. Generate contextual suggestions for manual findings using `references/fix-patterns.md`.
 5. Only after explicit authorization, rerun the same command with `--apply`.
-6. Re-run `/csp-scan` and show a before/after checklist.
+6. Re-run `/csp-scan`, then remove the temporary report.
 
 Even with `--apply`, never force modifications for inline code, guessed origins, framing decisions, meta-to-header migrations, or unparsed framework configuration. Backups created by the script are sibling files ending in `.bak` or a timestamped `.bak.<timestamp>` suffix.

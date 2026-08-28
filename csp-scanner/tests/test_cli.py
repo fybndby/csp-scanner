@@ -62,6 +62,19 @@ class CspScannerCliTest(unittest.TestCase):
             self.assertIn("未检测到 CSP 配置", result.stdout)
             self.assertFalse((project / ".csp-scan-report.json").exists())
 
+    def test_scan_does_not_write_report_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            project = Path(temporary)
+            (project / "server.js").write_text(
+                'res.setHeader("Content-Security-Policy", "default-src \'self\';");\n',
+                encoding="utf-8",
+            )
+
+            result = run_cli(SCAN, project)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((project / ".csp-scan-report.json").exists())
+
     def test_scan_reports_build_tool_even_when_csp_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
@@ -166,7 +179,7 @@ class CspScannerCliTest(unittest.TestCase):
                 "'Content-Security-Policy': \"default-src 'self';\" } } };\n"
             )
             source.write_text(original, encoding="utf-8")
-            scan = run_cli(SCAN, project)
+            scan = run_cli(SCAN, project, "--write")
             self.assertEqual(scan.returncode, 0, scan.stderr)
 
             result = run_cli(FIX, "--report", project / ".csp-scan-report.json", "--apply")
@@ -183,7 +196,7 @@ class CspScannerCliTest(unittest.TestCase):
             source = project / "nginx.conf"
             original = "add_header Content-Security-Policy \"default-src 'self'; base-uri 'self';\";\n"
             source.write_text(original, encoding="utf-8")
-            scan = run_cli(SCAN, project)
+            scan = run_cli(SCAN, project, "--write")
             self.assertEqual(scan.returncode, 0, scan.stderr)
 
             result = run_cli(FIX, "--report", project / ".csp-scan-report.json")
@@ -201,7 +214,7 @@ class CspScannerCliTest(unittest.TestCase):
             source = project / "_headers"
             original = "/*\n  Content-Security-Policy: default-src *; script-src 'unsafe-inline'; base-uri 'self';\n"
             source.write_text(original, encoding="utf-8")
-            scan = run_cli(SCAN, project)
+            scan = run_cli(SCAN, project, "--write")
             self.assertEqual(scan.returncode, 0, scan.stderr)
 
             result = run_cli(
@@ -230,7 +243,7 @@ class CspScannerCliTest(unittest.TestCase):
                 '{"headers":[{"key":"Content-Security-Policy","value":"default-src \'self\';"}]}\n',
                 encoding="utf-8",
             )
-            scan = run_cli(SCAN, project)
+            scan = run_cli(SCAN, project, "--write")
             self.assertEqual(scan.returncode, 0, scan.stderr)
             source.write_text("{}\n", encoding="utf-8")
 
